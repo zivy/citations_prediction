@@ -60,7 +60,7 @@ class PolynomialExponentialModelTimeSeries:
         else:
             return ""
 
-    def fit(self, x, y, last_k_test=None):
+    def fit(self, x, y, use_weights=False, last_k_test=None):
         """
         Fit a polynomial or exponential function to the data. This is an optimal model in the least squares
         error sense, assuming normally distributed noise. Try all polynomials, y = a^T[1,x, x^2,...]+eps, with
@@ -82,9 +82,13 @@ class PolynomialExponentialModelTimeSeries:
             x = x[0 : len(x) - last_k_test]
             y = y[0 : len(y) - last_k_test]
 
+        weights = None
+        if use_weights:  # softmax weights, e^(1/k) / sum(e^(1/n)...e^1)
+            weights = np.exp(1 / np.array(range(len(x), 0, -1)))
+            weights /= sum(weights)
         domain = [x.min(), x.max()]
         deg = 1
-        lsq_poly_fit = Polynomial.fit(x, y, deg=deg, domain=domain)
+        lsq_poly_fit = Polynomial.fit(x, y, deg=deg, w=weights, domain=domain)
         self._model = lsq_poly_fit
         if last_k_test:
             best_value = np.sqrt(np.mean((lsq_poly_fit(x_test) - y_test) ** 2))
@@ -97,7 +101,7 @@ class PolynomialExponentialModelTimeSeries:
             )
 
         for deg in range(2, len(x)):
-            lsq_poly_fit = Polynomial.fit(x, y, deg, domain=domain)
+            lsq_poly_fit = Polynomial.fit(x, y, deg, w=weights, domain=domain)
             if last_k_test:
                 value = np.sqrt(np.mean((lsq_poly_fit(x_test) - y_test) ** 2))
             else:
@@ -166,6 +170,12 @@ def main(argv=None):
         help="Number of years into the future which are predicted by the optimal model.",
     )
     parser.add_argument(
+        "--use_weights",
+        default=False,
+        action="store_true",
+        help="Use softmax weights inversely proportional to years from end.",
+    )
+    parser.add_argument(
         "--last_k_test",
         type=positive_int,
         help="Last k entries will be used to evaluate model (best has minimal RMSE on these entries).",
@@ -185,7 +195,12 @@ def main(argv=None):
     lsq_model = PolynomialExponentialModelTimeSeries()
     # Treat the approximation task as continuous with an unbounded range.
     # It isn't, so we need to project the results onto the valid solution space.
-    lsq_model.fit(x=df["year"], y=df["citations"], last_k_test=args.last_k_test)
+    lsq_model.fit(
+        x=df["year"],
+        y=df["citations"],
+        use_weights=args.use_weights,
+        last_k_test=args.last_k_test,
+    )
     years = np.array(range(df["year"].min(), df["year"].max() + args.pred_years + 1))
     known_citations = df["citations"].to_numpy()
 

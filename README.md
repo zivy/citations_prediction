@@ -9,13 +9,13 @@ The explicit models are polynomials of degree $1$ to $(n-1)$ where the data are 
 
 Once the optimal model is obtained it is used to predict all the values for the existing years and the number of years into the future given on the command line. The resulting bar-graph and overlaid line graph are saved to a pdf file.
 
-Installation and running (prediction of the next two years):
+Installation and running (prediction of the next two years and use weights to increase the importance of observations closer to the latest available year):
 ```
 conda env create -f environment.yml
 conda activate citations_prediction
 
-python citations_bar_plot_predictions.py data/design_citations.csv 2
-python citations_bar_plot_predictions.py data/notebook_citations.csv 2
-python citations_bar_plot_predictions.py data/r_citations.csv 2
+python citations_bar_plot_predictions.py data/design_citations.csv 2 --use_weights
+python citations_bar_plot_predictions.py data/notebook_citations.csv 2 --use_weights
+python citations_bar_plot_predictions.py data/r_citations.csv 2 --use_weights
 ```
 
