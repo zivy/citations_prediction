@@ -51,14 +51,24 @@ class PolynomialExponentialModelTimeSeries:
         self._model = None
         self._exponential_model = False
 
+    def _make_superscript(self, normal_str):
+        normal = ".+-x0123456789"
+        super_s = "‧⁺⁻ˣ⁰¹²³⁴⁵⁶⁷⁸⁹"
+        return normal_str.translate("".maketrans(normal, super_s))
+
     def __str__(self):
         """
-        String representation, but only for polynomials, not exponential.
+        String representation of the model.
         """
+        # The model coefficients are in the scaled domain (domain is scaled
+        # for numerical stability). To obtain the coefficients in the data
+        # domain we need to convert() the polynomial.
+        # For more details, see discussion on GitHub:
+        # https://github.com/numpy/numpy/issues/9533
         if self._model and not self._exponential_model:
-            return str(self._model)
+            return str(self._model.convert())
         else:
-            return ""
+            return "e" + self._make_superscript(str(self._model.convert()))
 
     def fit(self, x, y, use_weights=False, last_k_test=None):
         """
@@ -86,9 +96,8 @@ class PolynomialExponentialModelTimeSeries:
         if use_weights:  # softmax weights, e^(1/k) / sum(e^(1/n)...e^1)
             weights = np.exp(1 / np.array(range(len(x), 0, -1)))
             weights /= sum(weights)
-        domain = [x.min(), x.max()]
         deg = 1
-        lsq_poly_fit = Polynomial.fit(x, y, deg=deg, w=weights, domain=domain)
+        lsq_poly_fit = Polynomial.fit(x, y, deg=deg, w=weights)
         self._model = lsq_poly_fit
         if last_k_test:
             best_value = np.sqrt(np.mean((lsq_poly_fit(x_test) - y_test) ** 2))
@@ -101,7 +110,7 @@ class PolynomialExponentialModelTimeSeries:
             )
 
         for deg in range(2, len(x)):
-            lsq_poly_fit = Polynomial.fit(x, y, deg, w=weights, domain=domain)
+            lsq_poly_fit = Polynomial.fit(x, y, deg, w=weights)
             if last_k_test:
                 value = np.sqrt(np.mean((lsq_poly_fit(x_test) - y_test) ** 2))
             else:
@@ -111,7 +120,7 @@ class PolynomialExponentialModelTimeSeries:
                     num_parameters=deg + 2,
                 )
             if value < best_value:
-                best_value = aic
+                best_value = value
                 self._model = lsq_poly_fit
         lsq_exp_fit = Polynomial.fit(x, np.log(y), deg=1, w=np.sqrt(y))
         if last_k_test:
