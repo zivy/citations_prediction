@@ -19,3 +19,23 @@ python citations_bar_plot_predictions.py data/notebook_citations.csv 2 --use_wei
 python citations_bar_plot_predictions.py data/r_citations.csv 2 --use_weights
 ```
 
+The default output file type is *pdf*. If you want to use a different file type, it is determined by the output file name extension if you provide one. For example, when we automatically generate the images shown below we use the svg format:
+```
+python citations_bar_plot_predictions.py data/design_citations.csv 2 --use_weights --output_file_name results/design_citations.svg
+```
+
+Automatically generated results from the current data files (see the GitHub actions [workflow file](.github/workflows/main.yml)).
+<table>
+    <tr>
+    <td>The Design of SimpleITK [<a href="https://doi.org/10.3389/fninf.2013.00045">pdf</a>]</td>
+    <td><img src="results/design_citations.svg"></td>
+    </tr>
+    <tr>
+    <td>SimpleITK image-analysis notebooks: a collaborative environment for education and reproducible research [<a href="https://doi.org/10.1007/s10278-017-0037-8">pdf</a>]</td>
+    <td><img src="results/notebook_citations.svg"></td>
+    </tr>
+    <tr>
+    <td>Image segmentation, registration and characterization in R with SimpleITK [<a href="https://doi.org/10.18637/jss.v086.i08">pdf</a>]</td>
+    <td><img src="results/r_citations.svg"></td>
+  </tr>
+  </table>
