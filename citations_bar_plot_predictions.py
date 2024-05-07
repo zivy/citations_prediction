@@ -89,8 +89,8 @@ class PolynomialExponentialModelTimeSeries:
                 )
             x_test = x[-last_k_test:]
             y_test = y[-last_k_test:]
-            x = x[0 : len(x) - last_k_test]
-            y = y[0 : len(y) - last_k_test]
+            x = x[0 : len(x) - last_k_test]  # noqa E203
+            y = y[0 : len(y) - last_k_test]  # noqa E203
 
         weights = None
         if use_weights:  # softmax weights, e^(1/k) / sum(e^(1/n)...e^1)
@@ -171,7 +171,8 @@ def main(argv=None):
             x,
             ["year", "citations"],
         ),
-        help="csv file containing columns titled 'year' and 'citations' corresponding to the year and number of paper citations.",
+        help="csv file containing columns titled 'year' and 'citations' corresponding"
+        + " to the year and number of paper citations.",
     )
     parser.add_argument(
         "pred_years",
@@ -222,7 +223,7 @@ def main(argv=None):
     # hard to read (keeping the code for future reference):
     #
     # known_citations = np.concatenate([df['citations'].to_numpy(), [0]*args.pred_years])
-    # df = pd.DataFrame(data = {"known citations": known_citations, "predicted citations": predicted_citations}, index= years)
+    # df = pd.DataFrame(data = {"known citations": known_citations, "predicted citations": predicted_citations}, index= years)  # noqa E501
     # ax = df.plot.bar(rot=0, xlabel = "year", ylabel="number of citations")
     # # Add the number of citations at the top of each bar. Because they
     # # are so close we use a smaller font size, rotate the text 90 degrees
@@ -233,11 +234,14 @@ def main(argv=None):
     colors = ["blue", "orange"]
     fig, ax = plt.subplots()
     plt.bar(
-        years[0 : len(known_citations)], known_citations, label="known", color=colors[0]
+        years[0 : len(known_citations)],  # noqa E203
+        known_citations,
+        label="known",
+        color=colors[0],
     )
     plt.bar(
-        years[-args.pred_years :],
-        predicted_citations[-args.pred_years :],
+        years[-args.pred_years :],  # noqa E203
+        predicted_citations[-args.pred_years :],  # noqa E203
         label="predicted",
         color=colors[1],
     )
@@ -256,7 +260,7 @@ def main(argv=None):
         0.01,
         0.75,
         model_str
-        + f"median absolute error: {int(np.median(np.abs(predicted_citations[0:len(known_citations)] - known_citations)))}",
+        + f"median absolute error: {int(np.median(np.abs(predicted_citations[0:len(known_citations)] - known_citations)))}",  # noqa E501
         transform=ax.transAxes,
         color="green",
         fontsize=8,
