@@ -1,0 +1,13 @@
+name: citations_prediction_dev
+
+channels:
+  - defaults
+
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - matplotlib
+  - flake8
+  - black
+  - pre-commit
