@@ -44,6 +44,16 @@ def positive_int(i):
         )
 
 
+def non_negative_int(i):
+    res = int(i)
+    if res >= 0:
+        return res
+    else:
+        raise argparse.ArgumentTypeError(
+            f"Invalid argument ({i}), expected value >= 0 ."
+        )
+
+
 class PolynomialExponentialModelTimeSeries:
     """ """
 
@@ -176,7 +186,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "pred_years",
-        type=positive_int,
+        type=non_negative_int,
         help="Number of years into the future which are predicted by the optimal model.",
     )
     parser.add_argument(
@@ -192,7 +202,8 @@ def main(argv=None):
     )
     parser.add_argument(
         "--output_file_name",
-        help="Output file name. File extension defines the output file type.",
+        help="Output file name. File extension defines the output file type. If not provided, "
+        + "output is written to the input directory using input file name and the extension pdf.",
     )
     args = parser.parse_args(argv)
     output_file_path = (
@@ -202,34 +213,35 @@ def main(argv=None):
     )
 
     df = pd.read_csv(args.csv_file_name)
-    lsq_model = PolynomialExponentialModelTimeSeries()
-    # Treat the approximation task as continuous with an unbounded range.
-    # It isn't, so we need to project the results onto the valid solution space.
-    lsq_model.fit(
-        x=df["year"],
-        y=df["citations"],
-        use_weights=args.use_weights,
-        last_k_test=args.last_k_test,
-    )
     years = np.array(range(df["year"].min(), df["year"].max() + args.pred_years + 1))
     known_citations = df["citations"].to_numpy()
 
-    # Project the predicted citation numbers onto the valid discrete non-negative
-    # solution space.
-    predicted_citations = np.rint(lsq_model.predict(years))
-    predicted_citations = np.clip(predicted_citations, 0, predicted_citations.max())
+    if args.pred_years != 0:
+        lsq_model = PolynomialExponentialModelTimeSeries()
+        # Treat the approximation task as continuous with an unbounded range.
+        # It isn't, so we need to project the results onto the valid solution space.
+        lsq_model.fit(
+            x=df["year"],
+            y=df["citations"],
+            use_weights=args.use_weights,
+            last_k_test=args.last_k_test,
+        )
+        # Project the predicted citation numbers onto the valid discrete non-negative
+        # solution space.
+        predicted_citations = np.rint(lsq_model.predict(years))
+        predicted_citations = np.clip(predicted_citations, 0, predicted_citations.max())
 
-    # plotting the known and predicted bars side by side, interesting but
-    # hard to read (keeping the code for future reference):
-    #
-    # known_citations = np.concatenate([df['citations'].to_numpy(), [0]*args.pred_years])
-    # df = pd.DataFrame(data = {"known citations": known_citations, "predicted citations": predicted_citations}, index= years)  # noqa E501
-    # ax = df.plot.bar(rot=0, xlabel = "year", ylabel="number of citations")
-    # # Add the number of citations at the top of each bar. Because they
-    # # are so close we use a smaller font size, rotate the text 90 degrees
-    # # and move it slightly above the bar (padding).
-    # for container in ax.containers:
-    #     ax.bar_label(container, fontsize=8, rotation=90, padding=3)
+        # plotting the known and predicted bars side by side, interesting but
+        # hard to read (keeping the code for future reference):
+        #
+        # known_citations = np.concatenate([df['citations'].to_numpy(), [0]*args.pred_years])
+        # df = pd.DataFrame(data = {"known citations": known_citations, "predicted citations": predicted_citations}, index= years)  # noqa E501
+        # ax = df.plot.bar(rot=0, xlabel = "year", ylabel="number of citations")
+        # # Add the number of citations at the top of each bar. Because they
+        # # are so close we use a smaller font size, rotate the text 90 degrees
+        # # and move it slightly above the bar (padding).
+        # for container in ax.containers:
+        #     ax.bar_label(container, fontsize=8, rotation=90, padding=3)
 
     colors = ["blue", "orange"]
     fig, ax = plt.subplots()
@@ -239,14 +251,29 @@ def main(argv=None):
         label="known",
         color=colors[0],
     )
-    plt.bar(
-        years[-args.pred_years :],  # noqa E203
-        predicted_citations[-args.pred_years :],  # noqa E203
-        label="predicted",
-        color=colors[1],
-    )
-    plt.plot(years, predicted_citations, color=colors[1])
-    plt.scatter(years, predicted_citations, color=colors[1])
+    if args.pred_years != 0:
+        plt.bar(
+            years[-args.pred_years :],  # noqa E203
+            predicted_citations[-args.pred_years :],  # noqa E203
+            label="predicted",
+            color=colors[1],
+        )
+        plt.plot(years, predicted_citations, color=colors[1])
+        plt.scatter(years, predicted_citations, color=colors[1])
+        # Add text to the figure using axes coordinates (range of [0,1]).
+        model_str = f"prediction model: {str(lsq_model)}\n" if str(lsq_model) else ""
+        ax.text(
+            0.01,
+            0.75,
+            model_str
+            + "median absolute error: "
+            + f"{int(np.median(np.abs(predicted_citations[0:len(known_citations)] - known_citations)))}",
+            # noqa E501
+            transform=ax.transAxes,
+            color="green",
+            fontsize=8,
+        )
+
     # place the number of citations at the top of each bar.
     for container, color in zip(ax.containers, colors):
         ax.bar_label(container, color=color)
@@ -254,17 +281,6 @@ def main(argv=None):
     ax.set_ylabel("citation count")
     ax.set_xticks(years)
     np.set_printoptions(formatter={"float_kind": "{:.2f}".format})
-    # Add text to the figure using axes coordinates (range of [0,1]).
-    model_str = f"prediction model: {str(lsq_model)}\n" if str(lsq_model) else ""
-    ax.text(
-        0.01,
-        0.75,
-        model_str
-        + f"median absolute error: {int(np.median(np.abs(predicted_citations[0:len(known_citations)] - known_citations)))}",  # noqa E501
-        transform=ax.transAxes,
-        color="green",
-        fontsize=8,
-    )
 
     plt.legend()
     plt.savefig(output_file_path, dpi=150)
