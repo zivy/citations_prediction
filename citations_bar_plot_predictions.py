@@ -280,6 +280,7 @@ def main(argv=None):
     ax.set_xlabel("year")
     ax.set_ylabel("citation count")
     ax.set_xticks(years)
+    ax.set_xticklabels([str(y) for y in years], rotation=90, ha="center")
     np.set_printoptions(formatter={"float_kind": "{:.2f}".format})
 
     plt.legend()
